@@ -1,5 +1,10 @@
 # 站长助手-反爬 
 
+## 声明 
+本项目可有效防护基础爬虫, 并不能防护所有爬虫, 请知晓!!!   
+适用于个人及中小型网站, 如大型商业网站需要提供技术支持,请联系我们   
+
+
 ## 介绍 
 对web网站进行保护，有效防止程序爬取,基础网站攻击,防止链接在QQ、微信等被标红 
 
@@ -140,3 +145,14 @@ chmod 777 /opt/zhanzhanglua/rule.txt
 ## 技术支持
 
 有任何问题 请[联系我们](https://support.qq.com/products/352799)
+
+## TODO 
+- 前端js代码混淆  
+- 支持多种编码方式  
+- 无头浏览器深入检测  
+
+## 致谢 
+
+[lua-nginx-module](https://github.com/openresty/lua-nginx-module)    
+[vue-manage-system](https://github.com/lin-xin/vue-manage-system)   
+[github5](http://github5.com)  

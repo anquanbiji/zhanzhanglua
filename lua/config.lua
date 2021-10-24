@@ -534,16 +534,7 @@ function _M.get_random_token( num )
 
 ]]
 function _M.get_session_key() 
-    -- local session = ngx.shared.wafconfig
-    -- if session then 
-    --     local session_key, flags = session:get("config_session_key")
-    --     if session_key == nil then 
-    --         session_key = get_random_key(32)
-    --         session:set("config_session_key", session_key)
-    --     end 
-    --     return session_key
-    -- end 
-    -- return 'SESSION_KEY_COOKIE'
+
     return ngx.ctx.config_session_key or 'SESSION_KEY_COOKIE'
 
 end 
@@ -635,11 +626,11 @@ function _M.is_white_urls()
     if urls and #urls > 0 then 
         
         if ngx.re.find(ngx.var.uri,urls) then 
-            ngx.log(ngx.ERR,'[white urls]'..urls ..'[request url]'.. ngx.var.uri .. 'it is true')
+            
             return true
         end
     end  
-    ngx.log(ngx.ERR,'[white urls]'..urls ..'[request url]'.. ngx.var.uri .. 'it is false')
+    
     return false
 end
 

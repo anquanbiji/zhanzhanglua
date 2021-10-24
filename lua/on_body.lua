@@ -54,6 +54,8 @@ end
 
 
 local function main()
+
+
   if  config.get_config_all_fun() then 
     -- 状态码 是否重写
     if ngx.ctx.status then
