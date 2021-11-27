@@ -14,8 +14,8 @@
 
 ## 功能界面
 
-![由gif.github5.com进行录制](/gif/zhanzhang/seo.gif)
-![由gif.github5.com进行录制](/gif/zhanzhang/fanpa.png)
+![由gif.github5.com进行录制](http://doc.github5.com/gif/zhanzhang/seo.gif)
+![由gif.github5.com进行录制](http://doc.github5.com/gif/zhanzhang/fanpa.png)
 
 ## 功能详情 
 
