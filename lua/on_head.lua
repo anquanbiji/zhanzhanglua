@@ -3,7 +3,8 @@ local config = require "config"
 
 
 local function main( ... )
-
+-- 暂时保存状态码   防止修改状态码后， 在log中看不到原始状态码
+    ngx.ctx.status = ngx.status
     if not (ngx.ctx.is_close or ngx.ctx.is_skip) then 
         --ngx.log(ngx.ERR,'it is header')
         if  config.get_config_all_fun() then 
@@ -12,8 +13,7 @@ local function main( ... )
                 ngx.header.content_length = nil 
             end 
         
-            -- 暂时保存状态码   防止修改状态码后， 在log中看不到原始状态码
-            ngx.ctx.status = ngx.status
+            
             -- 如果请求异常 则 不返回状态码, 屏蔽返回异常内容
             if config.get_config_is_error_status() then 
                 if ngx.status > 399 then 

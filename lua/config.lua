@@ -31,12 +31,13 @@ _M.config_session_key = 'config_session_key' -- session 在cookie中的key
 _M.default_host = 'default' -- 默认域名
 _M.proxy = 'proxy_' -- 上游proxy代理前缀
 _M.rulefile = '/opt/zhanzhanglua/rule.txt'  -- 规则文件
+_M.logfile = '/opt/zhanzhanglua/log.txt'  -- 日志文件
 
 -- 更新404 页面信息
-_M.remote_houtai_url = 'http://zhanzhang.houtai.github5.com:8081/#login'
+_M.remote_houtai_url = 'http://zhanzhang.houtai.atghost.cn:8081/#login'
 
 --站群系统 加载host配置的地址 url?domain=host
-_M.remote_api_url = 'http://zhanzhang.houtai.github5.com:8081/github5/zhanzhang/fanpa/rule.json'
+_M.remote_api_url = 'http://zhanzhang.houtai.atghost.cn:8081/github5/zhanzhang/fanpa/rule.json'
 
 
 _M.global_error_page = 'error'
@@ -81,8 +82,19 @@ end
 
 function _M.my_log( level,info )
     -- body
-    -- ngx.log(level,info)
+   -- ngx.log(level,info)
 end
+
+-- 保存日志文件 
+function _M.save_log(data)
+
+	local file = io.open(_M.logfile,"a+")
+	if file then 
+		
+		file:write(cjson.encode(data) .. '\n')
+		file:close()
+	end 
+end 
 --[[
 保存配置到文件
 ]]--
@@ -159,6 +171,28 @@ function _M.load_all_config(host)
 
 
         ngx.ctx.config_session_key = 'SESSION_KEY_PRE'
+		
+		-- 插入代码规则 
+		if rules.changecontent then  
+
+			for key, value in pairs(rules.changecontent) do 
+			
+                --ngx.log(ngx.ERR,'load config [key]'..key ..'[value]'..(value)) -- tostring
+				--ngx.log(ngx.ERR,'load config [key]'..key )
+				--ngx.log(ngx.ERR,'load config [value]'..value )
+                ngx.ctx[key] = value 
+            end 
+
+		end 
+		
+		-- 推送规则 		
+		if rules.tuisong then  
+			for key, value in pairs(rules.tuisong) do 
+                --ngx.log(ngx.ERR,'load config [key]'..key ..'[value]'..value)
+                ngx.ctx[key] = value 
+            end 
+		end 
+		
         -- 防护规则配置
         if rules.rule then 
             for key, value in pairs(rules.rule) do 
@@ -194,7 +228,7 @@ end
 function _M.is_static_request( ... )
 
     if ngx.re.find(ngx.var.uri,'.ico|.png|.jpg|.js') then 
-            ngx.log(ngx.ERR,'[static uri]'.. ngx.var.uri .. 'it is true')
+            --ngx.log(ngx.ERR,'[static uri]'.. ngx.var.uri .. 'it is true')
             return true
     end
     return false;
@@ -359,6 +393,58 @@ function _M.get_client_ip( ... )
     end  
     return ngx.var.remote_addr 
 end
+
+--[[
+tj = 1 取前50 
+tj = 2 随机取50 
+
+]]--
+function _M.get_urls_last_set(server_name, tj)
+	local content = ''
+	local t = _M.get_urls_from_file(server_name)
+	local l = #t
+	if l < 50 then  
+		for key,var in ipairs(t) do  
+			content = content .. var .. '\n'
+		end 
+		return content
+	end 
+	-- 取前50个 
+	
+	for i =1, 49 do 
+		if tj == 1 then  
+			content = content .. t[i] .. '\n'
+		else -- 随机取50个 
+			content = content .. t[math.random(1,l)] .. '\n'
+
+		end 
+	end 
+	
+	return content
+end 
+
+--[[
+
+将记录的urls文件 根据域名进行过滤 保存到 table
+]]-- 
+function _M.get_urls_from_file(server_name)
+	local list = {}
+	local file = io.open(_M.logfile,"r")
+	if file then	
+		for line in file:lines() do
+
+			line = string.gsub(line,"\r","")
+			line = string.gsub(line,"\n","")
+			local data = cjson.decode(line)
+			if data.h ~= nil and data.d ~= nil and #data.h == 32 and ngx.var.server_name == server_name  then 
+				table.insert(list,1, 'Allow: ' ..data.u)
+			end                
+		
+		end
+		file:close()
+	end 
+	return list 
+end 
 --[[
 参数: 空
 功能: 是否是真实蜘蛛
@@ -424,8 +510,10 @@ function _M.is_real_spider()
  
                         local ret = ngx.re.find(ans.ptrdname, domain)
                         if ret then
-                            ngx.log(ngx.ERR,"[my_ptr]" .. ans.ptrdname)
+                            --ngx.log(ngx.ERR,"[my_ptr]" .. ans.ptrdname)
                             session:set('bot_' .. addr_ip, 1, 36000) -- 缓存10小时
+							
+							ngx.ctx.is_spider = true 
                             return true
                         end
                     end

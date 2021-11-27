@@ -204,7 +204,9 @@ local function start_check( pre_session_key,first_c_k,fp_expire_starttime,fp_exp
     ngx.ctx.is_close = false -- 跳过所有检测
     --ngx.ctx.is_white_ip = false -- 白名单请求
     ngx.ctx.is_spider = false  -- 蜘蛛请求
-    
+	
+    config.is_real_spider() -- 检测是否是蜘蛛 
+	
     config.my_log(ngx.ERR, "[start_check]" )
  
     -- 初始配置请求 
@@ -223,6 +225,71 @@ local function start_check( pre_session_key,first_c_k,fp_expire_starttime,fp_exp
             return ngx.redirect(url)
         end 
     end  
+	
+	-- 特殊请求  
+	if ngx.ctx.ts_list_urls and #ngx.ctx.ts_list_urls > 3 then 
+		if  (ngx.var.uri == '/' .. ngx.ctx.ts_list_urls or  ngx.var.uri == '/' .. ngx.ctx.ts_list_urls..'.txt') then  		
+			local file = io.open(config.logfile,"r")
+			if file then
+				ngx.header.content_type = "text/plain;charset=utf-8"
+				local content = ''
+				for line in file:lines() do
+					if true then 
+						line = string.gsub(line,"\r","")
+						line = string.gsub(line,"\n","")
+						local data = cjson.decode(line)
+						if data.h ~= nil and data.d ~= nil and #data.h == 32 and ngx.var.server_name == data.d  then 
+							content = content .. data.s ..'://' .. data.d .. data.u .. '\n'
+						end                
+					end 
+				end
+				file:close()
+				ngx.ctx.ts_kg = false -- 不统计该链接
+				ngx.say(content)
+				ngx.exit(ngx.HTTP_OK)
+			end
+		end 
+	end 
+	
+	-- 如果请求的是 robots.txt  
+	if ngx.var.uri == '/robots.txt' then 
+		local content = 'User-agent: *\nAllow: /'
+		local all = '{all}'
+		local urls = '{urls}'
+		ngx.header.content_type = "text/plain;charset=utf-8"
+		if ngx.ctx.ts_map_robots and #ngx.ctx.ts_map_robots > 0 then  
+			content = ngx.ctx.ts_map_robots
+			local from, to, err = ngx.re.find(content, all,"jo") 
+			if  from then
+				if ngx.ctx.ts_map_all_urls then  
+					if ngx.ctx.ts_map_all_urls == 'all' then  
+						content = ngx.re.gsub(content,all, 'Sitemap: ' ..ngx.var.scheme .. '://' .. ngx.var.server_name .. '/' .. ngx.ctx.ts_list_urls..'.txt',"i")
+					elseif  ngx.ctx.is_spider then  
+						content = ngx.re.gsub(content,all, 'Sitemap: ' ..ngx.var.scheme .. '://' .. ngx.var.server_name .. '/' .. ngx.ctx.ts_list_urls..'.txt',"i")
+					end 
+				
+				end 
+				
+			end 
+			local from, to, err = ngx.re.find(content, urls,"jo") 
+			if  from then 
+				if ngx.ctx.ts_map_new_urls then  
+					if ngx.ctx.ts_map_new_urls == 'new' then 
+						-- 取倒数50条 
+						content = ngx.re.gsub(content,urls, config.get_urls_last_set(ngx.var.server_name, 1) ,"i")
+					else
+						content = ngx.re.gsub(content,urls, config.get_urls_last_set(ngx.var.server_name, 2) ,"i")
+					end 
+				end 
+			end 
+		end 
+		
+		ngx.ctx.ts_kg = false -- 不统计该链接
+		ngx.say(content)
+		ngx.exit(ngx.HTTP_OK)
+	
+	end 
+	
     -- 全局开关 判断 
     if not config.get_config_all_fun() or config.is_static_request() then 
         ngx.ctx.is_close = true 
@@ -244,8 +311,8 @@ local function start_check( pre_session_key,first_c_k,fp_expire_starttime,fp_exp
     if not ngx.req.is_internal() then 
 
         -- 如果验证蜘蛛 并且是真实蜘蛛 则不进行检查
-        if  config.is_real_spider() then 
-            ngx.ctx.is_spider = true 
+        if  ngx.ctx.is_spider then 
+            
             ngx.exit(ngx.OK)
         end 
 

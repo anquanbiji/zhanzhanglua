@@ -39,8 +39,34 @@ local function read_rule(filename)
 end
 
 
+local function read_log(filename)
+    local session = ngx.shared.urlhash
+    if session then 
+        session:flush_all()  -- 删除所有项目     
+        file = io.open(filename,"r")
+        if file==nil then
+            return
+        end
+        for line in file:lines() do
+
+            if true then 
+                line = string.gsub(line,"\r","")
+                line = string.gsub(line,"\n","")
+                local data = cjson.decode(line)
+                if data.h ~= nil and #data.h == 32 then 
+					session:set(data.h,'1',0)
+                end                
+            end 
+        end
+        file:close()
+    end 
+end
+
 local function main( ... )
+	-- 读取规则
     read_rule(config.rulefile)
+	-- 读取log
+	read_log(config.logfile) 
 end
 
 local status, err = xpcall(main, function() config.my_log(ngx.ERR, debug.traceback()) end)

@@ -55,7 +55,44 @@ end
 
 local function main()
 
+  -- 内容替换规则 
+  if ngx.ctx.change_kg then  
 
+	local is_change = true 
+	if ngx.ctx.change_status_200 then 
+
+		if ngx.ctx.status ~= ngx.HTTP_OK then  
+
+			is_change = false
+		end 
+	end 
+	if ngx.ctx.change_content_type_html then 
+
+		local from, to, err = ngx.re.find(ngx.header["Content-Type"], "text/html","jo") 
+		if not from then  
+
+			is_change = false
+		end 
+	end 
+
+	
+	if is_change and ngx.ctx.change_old_code and ngx.ctx.change_new_code then 
+
+		 ngx.arg[1] = ngx.re.gsub(ngx.arg[1],ngx.ctx.change_old_code, ngx.ctx.change_new_code,"i")
+		 
+	end 
+	
+	if is_change and ngx.ctx.change_tihuan_old_code and ngx.ctx.change_tihuan_new_code then 
+
+		 ngx.arg[1] = ngx.re.gsub(ngx.arg[1],ngx.ctx.change_tihuan_old_code, ngx.ctx.change_tihuan_new_code,"i")
+		 
+	end  
+  end 
+
+  -- 关闭了所有功能 或者 跳过检测时 ，不执行反爬检查 
+  if ngx.ctx.is_close or ngx.ctx.is_skip then 
+	return 
+  end 
   if  config.get_config_all_fun() then 
     -- 状态码 是否重写
     if ngx.ctx.status then
@@ -151,12 +188,10 @@ local function main()
     end
   end 
 end
--- 关闭了所有功能 或者 跳过检测时 ，不执行过滤
-if not (ngx.ctx.is_close or ngx.ctx.is_skip) then 
 
-  local status, err = xpcall(main, function() ngx.log(ngx.ERR, debug.traceback()) end)
-  if not status then
-      ngx.log(ngx.ERR, err)
-      ngx.exit(ngx.OK)
-  end
-end 
+
+local status, err = xpcall(main, function() ngx.log(ngx.ERR, debug.traceback()) end)
+if not status then
+  ngx.log(ngx.ERR, err)
+  ngx.exit(ngx.OK)
+end
